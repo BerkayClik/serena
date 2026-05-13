@@ -13,6 +13,11 @@ Serena differentiates between
   * **project-specific memories**, which are stored in the `.serena/memories/` directory within your project folder, and
   * **global memories**, which are shared across all projects and, by default, are stored in `~/.serena/memories/global/`
 
+The LLM is informed about the existence of memories and instructed to read them when appropriate, 
+inferring appropriateness from the file name.
+When the agent starts working on a project, it receives the list of available memories. 
+The agent should be instructed to update memories by the user when appropriate.
+
 ### Design Rationale
 
 Serena's memory system is intentionally minimal. It was designed to satisfy the following
