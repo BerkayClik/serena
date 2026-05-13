@@ -82,13 +82,11 @@ class RenameMemoryTool(Tool, ToolMarkerCanEdit):
         The "global" topic should only be used if explicitly instructed.
         References to other memories that are marked with the `mem:` prefix will be updated accordingly.
         """
-        renaming_message = self.memories_manager.move_memory(old_name, new_name, is_tool_context=True)
-        for memory in self.memories_manager.list_memories().get_full_list():
-            memory_content = self.memories_manager.load_memory(memory)
-            updated_content, n_replacements = self.memories_manager.rename_references_to_memory(memory_content, old_name, new_name)
-            if n_replacements > 0:
-                log.info(f"Updated {n_replacements} references to memory {old_name} to {new_name}")
-                self.memories_manager.save_memory(memory, updated_content, is_tool_context=True)
+        renaming_message, n_references_updated = self.memories_manager.rename_memory_and_propagate_references(
+            old_name, new_name, is_tool_context=True
+        )
+        if n_references_updated > 0:
+            log.info(f"Updated {n_references_updated} references to memory {old_name} to {new_name}")
         return renaming_message
 
 
@@ -104,6 +102,7 @@ class EditMemoryTool(Tool, ToolMarkerCanEdit):
         repl: str,
         mode: Literal["literal", "regex"],
         allow_multiple_occurrences: bool = False,
+        dotall: bool = False,
     ) -> str:
         r"""
         Replace content matching a regular expression in a memory.
@@ -112,10 +111,16 @@ class EditMemoryTool(Tool, ToolMarkerCanEdit):
         :param needle: the string or regex pattern to search for. In regex mode, be careful to not replace too much!
             If `mode` is "literal", this string will be matched exactly.
             If `mode` is "regex", this string will be treated as a regular expression (syntax of Python's `re` module,
-            with flags DOTALL and MULTILINE enabled).
+            with the MULTILINE flag enabled and DOTALL controlled by the `dotall` parameter).
         :param repl: the replacement string (verbatim).
         :param mode: either "literal" or "regex", specifying how the `needle` parameter is to be interpreted.
         :param allow_multiple_occurrences: whether to allow matching and replacing multiple occurrences.
             If false and multiple occurrences are found, an error will be returned.
+        :param dotall: whether to compile the regex with the DOTALL flag, so that ``.`` matches newlines.
+            Only relevant in regex mode. Defaults to False, restricting ``.`` to a single line, which is the safer
+            choice for typical line-bounded memory edits and avoids accidentally consuming entire blocks of content.
+            Set to True deliberately when you intend a multi-line replacement (alternatively, use ``[\s\S]*?``).
         """
-        return self.memories_manager.edit_memory(memory_name, needle, repl, mode, allow_multiple_occurrences, is_tool_context=True)
+        return self.memories_manager.edit_memory(
+            memory_name, needle, repl, mode, allow_multiple_occurrences, is_tool_context=True, dotall=dotall
+        )
